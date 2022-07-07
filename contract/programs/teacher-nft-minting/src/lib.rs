@@ -9,7 +9,7 @@ use mpl_token_metadata::instruction::{create_master_edition_v3, create_metadata_
 
 pub mod merkle_proof;
 
-declare_id!("2fikMtYFNn7gSANHrXQSDRXxVj3sEjvLjLAitg8614XH");
+declare_id!("6D8BPPPPdr5XBRffKxJ81UJkzcMsfhvcQW9PMjY5TrSe");
 pub mod constants {
     pub const MINTING_PDA_SEED: &[u8] = b"teacher_minting";
 }
