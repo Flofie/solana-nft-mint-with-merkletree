@@ -1,14 +1,14 @@
 anchor_version = "0.19.0"
 
 [programs.devnet]
-metaplex_anchor_nft = "6D8BPPPPdr5XBRffKxJ81UJkzcMsfhvcQW9PMjY5TrSe"
+metaplex_anchor_nft = "6Lqb64UMp74A1Bhqtr59jabsp225HKstYdQjaoFX1VMt"
 
 [registry]
 url = "https://anchor.projectserum.com"
 
 [provider]
 cluster = "devnet"
-wallet = "/home/flo/.config/solana/ds-2.json"
+wallet = "/home/flo/.config/solana/ds-4.json"
 
 [scripts]
 test = "ts-mocha --debug -p ./tsconfig.json -t 1000000 tests/**/*.ts"
