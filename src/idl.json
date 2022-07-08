@@ -464,6 +464,11 @@
           "name": "masterEdition",
           "isMut": true,
           "isSigner": false
+        },
+        {
+          "name": "maker",
+          "isMut": true,
+          "isSigner": false
         }
       ],
       "args": [
@@ -542,6 +547,11 @@
         },
         {
           "name": "masterEdition",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "maker",
           "isMut": true,
           "isSigner": false
         }
@@ -783,6 +793,6 @@
     }
   ],
   "metadata": {
-    "address": "6Lqb64UMp74A1Bhqtr59jabsp225HKstYdQjaoFX1VMt"
+    "address": "DbK1YtvKCBGBiHw4HsbES25mFocihSt7xm55tpDahLe9"
   }
 }

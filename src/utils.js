@@ -12,7 +12,12 @@ const {
 } = require('@solana/spl-token');
 const { SystemProgram } = web3;
 
+const TOKEN_METADATA_PROGRAM_ID = new anchor.web3.PublicKey(
+  'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s'
+);
+
 const SEED = 'wallet_mint';
+const NFT_CREATOR_SEED = 'NFT_CREATOR_SEED';
 const OWNER = new PublicKey('2JVdWB97roMRjyTYX2qP6RxesdENVyvQNKZeERWUDnkA');
 const TITLE = 'Degen Sweeper';
 const SYMBOL = 'DS';
@@ -22,24 +27,15 @@ const BASE_URI =
 export const _getState = async (provider, wallet) => {
   const programID = new PublicKey(idl.metadata.address);
   const program = new Program(idl, programID, provider);
-  const [stakingPubkey] = await web3.PublicKey.findProgramAddress(
+  const [walletMintingPubkey] = await web3.PublicKey.findProgramAddress(
     [Buffer.from(utils.bytes.utf8.encode(SEED))],
     program.programId
   );
-  const [userstakingPubkey] = await web3.PublicKey.findProgramAddress(
-    [wallet.publicKey.toBuffer()],
-    program.programId
+  const testdata = await program.account.mintingAccount.fetch(
+    walletMintingPubkey
   );
-  const testdata = await program.account.mintingAccount.fetch(stakingPubkey);
-  let userdata = [];
-  try {
-    userdata = await program.account.userMintingAccount.fetch(
-      userstakingPubkey
-    );
-  } catch (err) {
-    console.log(err);
-  }
-  console.log('UD:', userdata, testdata);
+
+  console.log('UD:', testdata);
   let curStage = testdata.curStage;
   const ogPrice = testdata.ogPrice.div(new anchor.BN(1e6)).toNumber();
   const wlPrice = testdata.wlPrice.div(new anchor.BN(1e6)).toNumber();
@@ -100,18 +96,19 @@ export const _updateOgList = async (
 ) => {
   const programID = new PublicKey(idl.metadata.address);
   const program = new Program(idl, programID, provider);
-  const [stakingPubkey, stakingBump] = await web3.PublicKey.findProgramAddress(
-    [Buffer.from(utils.bytes.utf8.encode(SEED))],
-    program.programId
-  );
+  const [walletMintingPubkey, walletMintingBump] =
+    await web3.PublicKey.findProgramAddress(
+      [Buffer.from(utils.bytes.utf8.encode(SEED))],
+      program.programId
+    );
   await program.rpc.updateOgRoot(
-    stakingBump,
+    walletMintingBump,
     og_list_url,
     og_root_url,
     og_root_hash,
     {
       accounts: {
-        mintingAccount: stakingPubkey,
+        mintingAccount: walletMintingPubkey,
         admin: wallet.publicKey,
       },
     }
@@ -121,13 +118,14 @@ export const _updateOgList = async (
 export const isOgList = async (provider, wallet, proof) => {
   const programID = new PublicKey(idl.metadata.address);
   const program = new Program(idl, programID, provider);
-  const [stakingPubkey, stakingBump] = await web3.PublicKey.findProgramAddress(
-    [Buffer.from(utils.bytes.utf8.encode(SEED))],
-    program.programId
-  );
-  await program.rpc.isOgList(stakingBump, proof, {
+  const [walletMintingPubkey, walletMintingBump] =
+    await web3.PublicKey.findProgramAddress(
+      [Buffer.from(utils.bytes.utf8.encode(SEED))],
+      program.programId
+    );
+  await program.rpc.isOgList(walletMintingBump, proof, {
     accounts: {
-      mintingAccount: stakingPubkey,
+      mintingAccount: walletMintingPubkey,
       admin: wallet.publicKey,
     },
   });
@@ -142,18 +140,19 @@ export const _updateWlList = async (
 ) => {
   const programID = new PublicKey(idl.metadata.address);
   const program = new Program(idl, programID, provider);
-  const [stakingPubkey, stakingBump] = await web3.PublicKey.findProgramAddress(
-    [Buffer.from(utils.bytes.utf8.encode(SEED))],
-    program.programId
-  );
+  const [walletMintingPubkey, walletMintingBump] =
+    await web3.PublicKey.findProgramAddress(
+      [Buffer.from(utils.bytes.utf8.encode(SEED))],
+      program.programId
+    );
   await program.rpc.updateWlRoot(
-    stakingBump,
+    walletMintingBump,
     wl_list_url,
     wl_root_url,
     wl_root_hash,
     {
       accounts: {
-        mintingAccount: stakingPubkey,
+        mintingAccount: walletMintingPubkey,
         admin: wallet.publicKey,
       },
     }
@@ -163,13 +162,14 @@ export const _updateWlList = async (
 export const isWlList = async (provider, wallet, proof) => {
   const programID = new PublicKey(idl.metadata.address);
   const program = new Program(idl, programID, provider);
-  const [stakingPubkey, stakingBump] = await web3.PublicKey.findProgramAddress(
-    [Buffer.from(utils.bytes.utf8.encode(SEED))],
-    program.programId
-  );
-  await program.rpc.isWlList(stakingBump, proof, {
+  const [walletMintingPubkey, walletMintingBump] =
+    await web3.PublicKey.findProgramAddress(
+      [Buffer.from(utils.bytes.utf8.encode(SEED))],
+      program.programId
+    );
+  await program.rpc.isWlList(walletMintingBump, proof, {
     accounts: {
-      mintingAccount: stakingPubkey,
+      mintingAccount: walletMintingPubkey,
       admin: wallet.publicKey,
     },
   });
@@ -184,18 +184,19 @@ export const updatePrice = async (
 ) => {
   const programID = new PublicKey(idl.metadata.address);
   const program = new Program(idl, programID, provider);
-  const [stakingPubkey, stakingBump] = await web3.PublicKey.findProgramAddress(
-    [Buffer.from(utils.bytes.utf8.encode(SEED))],
-    program.programId
-  );
+  const [walletMintingPubkey, walletMintingBump] =
+    await web3.PublicKey.findProgramAddress(
+      [Buffer.from(utils.bytes.utf8.encode(SEED))],
+      program.programId
+    );
   await program.rpc.updatePrice(
-    stakingBump,
+    walletMintingBump,
     new anchor.BN(ogPrice).mul(new anchor.BN(1e6)),
     new anchor.BN(wlPrice).mul(new anchor.BN(1e6)),
     new anchor.BN(blPrice).mul(new anchor.BN(1e6)),
     {
       accounts: {
-        mintingAccount: stakingPubkey,
+        mintingAccount: walletMintingPubkey,
         admin: wallet.publicKey,
       },
     }
@@ -211,18 +212,19 @@ export const updateAmount = async (
 ) => {
   const programID = new PublicKey(idl.metadata.address);
   const program = new Program(idl, programID, provider);
-  const [stakingPubkey, stakingBump] = await web3.PublicKey.findProgramAddress(
-    [Buffer.from(utils.bytes.utf8.encode(SEED))],
-    program.programId
-  );
+  const [walletMintingPubkey, walletMintingBump] =
+    await web3.PublicKey.findProgramAddress(
+      [Buffer.from(utils.bytes.utf8.encode(SEED))],
+      program.programId
+    );
   await program.rpc.updateAmount(
-    stakingBump,
+    walletMintingBump,
     new anchor.BN(ogPrice),
     new anchor.BN(wlPrice),
     new anchor.BN(blPrice),
     {
       accounts: {
-        mintingAccount: stakingPubkey,
+        mintingAccount: walletMintingPubkey,
         admin: wallet.publicKey,
       },
     }
@@ -232,13 +234,14 @@ export const updateAmount = async (
 export const setStage = async (provider, wallet, newStage) => {
   const programID = new PublicKey(idl.metadata.address);
   const program = new Program(idl, programID, provider);
-  const [stakingPubkey, stakingBump] = await web3.PublicKey.findProgramAddress(
-    [Buffer.from(utils.bytes.utf8.encode(SEED))],
-    program.programId
-  );
-  await program.rpc.setStage(stakingBump, newStage, {
+  const [walletMintingPubkey, walletMintingBump] =
+    await web3.PublicKey.findProgramAddress(
+      [Buffer.from(utils.bytes.utf8.encode(SEED))],
+      program.programId
+    );
+  await program.rpc.setStage(walletMintingBump, newStage, {
     accounts: {
-      mintingAccount: stakingPubkey,
+      mintingAccount: walletMintingPubkey,
       admin: wallet.publicKey,
     },
   });
@@ -247,13 +250,14 @@ export const setStage = async (provider, wallet, newStage) => {
 export const setUri = async (provider, wallet, newUri) => {
   const programID = new PublicKey(idl.metadata.address);
   const program = new Program(idl, programID, provider);
-  const [stakingPubkey, stakingBump] = await web3.PublicKey.findProgramAddress(
-    [Buffer.from(utils.bytes.utf8.encode(SEED))],
-    program.programId
-  );
-  await program.rpc.setUri(stakingBump, newUri, {
+  const [walletMintingPubkey, walletMintingBump] =
+    await web3.PublicKey.findProgramAddress(
+      [Buffer.from(utils.bytes.utf8.encode(SEED))],
+      program.programId
+    );
+  await program.rpc.setUri(walletMintingBump, newUri, {
     accounts: {
-      mintingAccount: stakingPubkey,
+      mintingAccount: walletMintingPubkey,
       admin: wallet.publicKey,
     },
   });
@@ -291,21 +295,20 @@ export const initialize = async (provider, wallet) => {
 };
 
 export const multiMint = async (provider, wallet, count, proof, wlmint) => {
-  const { SystemProgram, Keypair } = web3;
+  const { SystemProgram } = web3;
   const programID = new PublicKey(idl.metadata.address);
   const program = new Program(idl, programID, provider);
-  const [stakingPubkey, stakingBump] = await web3.PublicKey.findProgramAddress(
+  const [walletMintPubkey] = await web3.PublicKey.findProgramAddress(
     [Buffer.from(utils.bytes.utf8.encode(SEED))],
     program.programId
   );
-  const [userMintingPubkey, userMintingBump] =
-    await web3.PublicKey.findProgramAddress(
-      [wallet.publicKey.toBuffer()],
-      program.programId
-    );
-
-  const TOKEN_METADATA_PROGRAM_ID = new anchor.web3.PublicKey(
-    'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s'
+  const [makerPubkey] = await web3.PublicKey.findProgramAddress(
+    [Buffer.from(utils.bytes.utf8.encode(NFT_CREATOR_SEED))],
+    program.programId
+  );
+  const [userMintingPubkey] = await web3.PublicKey.findProgramAddress(
+    [wallet.publicKey.toBuffer()],
+    program.programId
   );
 
   let lamports =
@@ -351,7 +354,6 @@ export const multiMint = async (provider, wallet, count, proof, wlmint) => {
       provider.wallet.publicKey
     );
     const signers = [mintKey];
-    const cleanupInstructions = [];
     const instructions = [
       anchor.web3.SystemProgram.createAccount({
         fromPubkey: wallet.publicKey,
@@ -386,12 +388,12 @@ export const multiMint = async (provider, wallet, count, proof, wlmint) => {
             tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
             payer: wallet.publicKey,
             owner: OWNER,
-            mintingAccount: stakingPubkey,
+            mintingAccount: walletMintPubkey,
             userMintingCounterAccount: userMintingPubkey,
             systemProgram: SystemProgram.programId,
             rent: anchor.web3.SYSVAR_RENT_PUBKEY,
             masterEdition: masterEdition,
-            // collection,
+            maker: makerPubkey,
           },
         })
       : program.instruction.mintNft({
@@ -404,21 +406,17 @@ export const multiMint = async (provider, wallet, count, proof, wlmint) => {
             tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
             payer: wallet.publicKey,
             owner: OWNER,
-            mintingAccount: stakingPubkey,
+            mintingAccount: walletMintPubkey,
             userMintingCounterAccount: userMintingPubkey,
             systemProgram: SystemProgram.programId,
             rent: anchor.web3.SYSVAR_RENT_PUBKEY,
             masterEdition: masterEdition,
-            // collection,
+            maker: makerPubkey,
           },
         });
     instructions.push(txinstruction);
     signersMatrix.push(signers);
     instructionsMatrix.push(instructions);
-    if (cleanupInstructions.length > 0) {
-      instructionsMatrix.push(cleanupInstructions);
-      signersMatrix.push([]);
-    }
   }
   try {
     return (
@@ -436,22 +434,17 @@ export const multiMint = async (provider, wallet, count, proof, wlmint) => {
 };
 
 export const mintCollection = async (provider, wallet) => {
-  const { SystemProgram, Keypair } = web3;
+  const { SystemProgram } = web3;
   const programID = new PublicKey(idl.metadata.address);
   const program = new Program(idl, programID, provider);
-  const [stakingPubkey, stakingBump] = await web3.PublicKey.findProgramAddress(
+  const [walletMintingPubkey] = await web3.PublicKey.findProgramAddress(
     [Buffer.from(utils.bytes.utf8.encode(SEED))],
     program.programId
-  );
-
-  const TOKEN_METADATA_PROGRAM_ID = new anchor.web3.PublicKey(
-    'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s'
   );
   let lamports =
     await program.provider.connection.getMinimumBalanceForRentExemption(
       MINT_SIZE
     );
-  const owner = new PublicKey('2kQop25msd12g6r8oyJCd7RYY7oURhshiVHRXW6ALCxD');
   const getMetadata = async (mint) => {
     return (
       await anchor.web3.PublicKey.findProgramAddress(
@@ -521,8 +514,8 @@ export const mintCollection = async (provider, wallet) => {
         tokenAccount: NftTokenAccount,
         tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
         payer: wallet.publicKey,
-        owner,
-        mintingAccount: stakingPubkey,
+        owner: OWNER,
+        mintingAccount: walletMintingPubkey,
         systemProgram: SystemProgram.programId,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         masterEdition: masterEdition,

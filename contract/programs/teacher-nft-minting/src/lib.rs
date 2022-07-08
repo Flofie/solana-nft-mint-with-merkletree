@@ -1,5 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::program::invoke;
+use anchor_lang::solana_program::program::invoke_signed;
 use anchor_lang::solana_program::system_instruction;
 use anchor_spl::token;
 use anchor_spl::token::{MintTo, Token};
@@ -7,9 +8,10 @@ use mpl_token_metadata::instruction::{create_master_edition_v3, create_metadata_
 
 pub mod merkle_proof;
 
-declare_id!("6Lqb64UMp74A1Bhqtr59jabsp225HKstYdQjaoFX1VMt");
+declare_id!("DbK1YtvKCBGBiHw4HsbES25mFocihSt7xm55tpDahLe9");
 pub mod constants {
     pub const MINTING_PDA_SEED: &[u8] = b"wallet_mint";
+    pub const NFT_CREATOR_SEED: &str = "NFT_CREATOR_SEED";
 }
 
 #[program]
@@ -394,6 +396,9 @@ fn _mint_nft(ctx: Context<MintNFT>, price: u64, state: u8, wl_mint: bool) -> Pro
     msg!("CPI Context Assigned");
     token::mint_to(cpi_ctx, 1)?;
     msg!("Token Minted !!!");
+
+    let maker = &ctx.accounts.maker;
+
     let account_info = vec![
         ctx.accounts.metadata.to_account_info(),
         ctx.accounts.mint.to_account_info(),
@@ -403,12 +408,13 @@ fn _mint_nft(ctx: Context<MintNFT>, price: u64, state: u8, wl_mint: bool) -> Pro
         ctx.accounts.token_program.to_account_info(),
         ctx.accounts.system_program.to_account_info(),
         ctx.accounts.rent.to_account_info(),
+        maker.to_account_info(),
     ];
     msg!("Account Info Assigned");
     let creator = vec![
         mpl_token_metadata::state::Creator {
-            address: ctx.accounts.mint.key(),
-            verified: false,
+            address: maker.key(),
+            verified: true,
             share: 100,
         },
         mpl_token_metadata::state::Creator {
@@ -432,25 +438,31 @@ fn _mint_nft(ctx: Context<MintNFT>, price: u64, state: u8, wl_mint: bool) -> Pro
     // };
 
     msg!("Creator Assigned");
-    invoke(
+
+    let (_creator, creator_bump) =
+        Pubkey::find_program_address(&[constants::NFT_CREATOR_SEED.as_bytes()], ctx.program_id);
+    let authority_seeds = [constants::NFT_CREATOR_SEED.as_bytes(), &[creator_bump]];
+
+    invoke_signed(
         &create_metadata_accounts_v2(
             ctx.accounts.token_metadata_program.key(),
             ctx.accounts.metadata.key(),
             ctx.accounts.mint.key(),
             ctx.accounts.mint_authority.key(),
             ctx.accounts.payer.key(),
-            ctx.accounts.payer.key(),
+            maker.key(),
             name,
             ctx.accounts.minting_account.symbol.to_string(),
             new_uri,
             Some(creator),
             1000,
             true,
-            true,
+            false,
             None, // Some(collection),
             None,
         ),
         account_info.as_slice(),
+        &[&authority_seeds],
     )?;
     msg!("Metadata Account Created !!!");
     let master_edition_infos = vec![
@@ -463,6 +475,7 @@ fn _mint_nft(ctx: Context<MintNFT>, price: u64, state: u8, wl_mint: bool) -> Pro
         ctx.accounts.token_program.to_account_info(),
         ctx.accounts.system_program.to_account_info(),
         ctx.accounts.rent.to_account_info(),
+        maker.to_account_info(),
     ];
     msg!("Master Edition Account Infos Assigned");
     invoke(
@@ -470,7 +483,7 @@ fn _mint_nft(ctx: Context<MintNFT>, price: u64, state: u8, wl_mint: bool) -> Pro
             ctx.accounts.token_metadata_program.key(),
             ctx.accounts.master_edition.key(),
             ctx.accounts.mint.key(),
-            ctx.accounts.payer.key(),
+            maker.key(),
             ctx.accounts.mint_authority.key(),
             ctx.accounts.metadata.key(),
             ctx.accounts.payer.key(),
@@ -636,6 +649,9 @@ pub struct MintNFT<'info> {
     #[account(mut)]
     pub master_edition: UncheckedAccount<'info>,
     // pub collection: AccountInfo<'info>,
+    /// CHECK: account constraints checked in account trait
+    #[account(mut)]
+    pub maker: UncheckedAccount<'info>,
 }
 
 #[derive(Accounts)]
