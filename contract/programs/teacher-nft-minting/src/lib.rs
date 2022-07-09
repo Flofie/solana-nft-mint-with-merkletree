@@ -633,7 +633,7 @@ pub struct MintNFT<'info> {
     pub minting_account: Box<Account<'info, MintingAccount>>,
     /// CHECK: This is not dangerous because we don't read or write from this account
     #[account(
-        init,
+        init_if_needed,
         payer = payer,
         seeds = [ payer.key().as_ref() ],
         bump,
