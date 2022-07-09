@@ -19,9 +19,7 @@ local-testing = []
 aurorynet = []
 
 [dependencies]
-anchor-lang = "0.19.0"
-anchor-spl = "0.19.0"
-spl-token = { version = "3.3.0", features = ["no-entrypoint"] }
-metaplex-token-metadata = {  version = "0.0.1", features = ["no-entrypoint"] }
-mpl-token-metadata = { version="1.2.5", features = [ "no-entrypoint" ]}
-arrayref = "0.3.6"
+anchor-lang = "0.24.2"
+anchor-spl = "0.24.2"
+mpl-token-metadata = { version="1.2.7", features = [ "no-entrypoint" ]}
+solana-program = "1.9.13"

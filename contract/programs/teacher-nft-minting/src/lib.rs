@@ -5,10 +5,11 @@ use anchor_lang::solana_program::system_instruction;
 use anchor_spl::token;
 use anchor_spl::token::{MintTo, Token};
 use mpl_token_metadata::instruction::{create_master_edition_v3, create_metadata_accounts_v2};
+use std::mem::size_of;
 
 pub mod merkle_proof;
 
-declare_id!("DbK1YtvKCBGBiHw4HsbES25mFocihSt7xm55tpDahLe9");
+declare_id!("EKsCmywFjtZ6DABbi57qvqK2CBMjFsC7c3CXV3G2HfKs");
 pub mod constants {
     pub const MINTING_PDA_SEED: &[u8] = b"wallet_mint";
     pub const NFT_CREATOR_SEED: &str = "NFT_CREATOR_SEED";
@@ -21,7 +22,6 @@ pub mod metaplex_anchor_nft {
 
     pub fn initialize(
         ctx: Context<Initialize>,
-        _nonce_minting: u8,
         max_supply: u64,
         og_max: u64,
         wl_max: u64,
@@ -32,7 +32,7 @@ pub mod metaplex_anchor_nft {
         title: String,
         symbol: String,
         base_uri: String,
-    ) -> ProgramResult {
+    ) -> Result<()> {
         ctx.accounts.minting_account.admin_key = *ctx.accounts.initializer.key;
         ctx.accounts.minting_account.max_supply = max_supply;
         ctx.accounts.minting_account.og_max = og_max;
@@ -54,7 +54,7 @@ pub mod metaplex_anchor_nft {
         ctx: Context<UpdateAdmin>,
         _nonce_minting: u8,
         new_admin: Pubkey,
-    ) -> ProgramResult {
+    ) -> Result<()> {
         ctx.accounts.minting_account.admin_key = new_admin;
 
         Ok(())
@@ -67,7 +67,7 @@ pub mod metaplex_anchor_nft {
         og_list: String,
         og_root_url: String,
         og_root_hash: [u8; 32],
-    ) -> ProgramResult {
+    ) -> Result<()> {
         ctx.accounts.minting_account.og_list_url = og_list;
         ctx.accounts.minting_account.og_root_url = og_root_url;
         ctx.accounts.minting_account.og_root = og_root_hash;
@@ -81,7 +81,7 @@ pub mod metaplex_anchor_nft {
         wl_list: String,
         wl_root_url: String,
         wl_root_hash: [u8; 32],
-    ) -> ProgramResult {
+    ) -> Result<()> {
         ctx.accounts.minting_account.wl_list_url = wl_list;
         ctx.accounts.minting_account.wl_root_url = wl_root_url;
         ctx.accounts.minting_account.wl_root = wl_root_hash;
@@ -92,7 +92,7 @@ pub mod metaplex_anchor_nft {
         ctx: Context<CommonSt>,
         _nonce_minting: u8,
         proof: Vec<[u8; 32]>,
-    ) -> ProgramResult {
+    ) -> Result<()> {
         if proof.is_empty() {
             return Err(WalletMintErrors::InvalidProof.into());
         }
@@ -112,7 +112,7 @@ pub mod metaplex_anchor_nft {
         ctx: Context<CommonSt>,
         _nonce_minting: u8,
         proof: Vec<[u8; 32]>,
-    ) -> ProgramResult {
+    ) -> Result<()> {
         if proof.is_empty() {
             return Err(WalletMintErrors::InvalidProof.into());
         }
@@ -135,7 +135,7 @@ pub mod metaplex_anchor_nft {
         new_og_price: u64,
         new_wl_price: u64,
         new_public_price: u64,
-    ) -> ProgramResult {
+    ) -> Result<()> {
         if new_og_price > 0 {
             ctx.accounts.minting_account.og_price = new_og_price;
         }
@@ -156,7 +156,7 @@ pub mod metaplex_anchor_nft {
         new_og_amout: u64,
         new_wl_amout: u64,
         new_public_amout: u64,
-    ) -> ProgramResult {
+    ) -> Result<()> {
         if new_og_amout > 0 {
             ctx.accounts.minting_account.og_max = new_og_amout;
         }
@@ -171,7 +171,7 @@ pub mod metaplex_anchor_nft {
     }
 
     #[access_control(is_admin(&ctx.accounts.minting_account, &ctx.accounts.admin))]
-    pub fn set_stage(ctx: Context<CommonSt>, _nonce_minting: u8, new_stage: u8) -> ProgramResult {
+    pub fn set_stage(ctx: Context<CommonSt>, _nonce_minting: u8, new_stage: u8) -> Result<()> {
         if new_stage < 4 {
             ctx.accounts.minting_account.cur_stage = new_stage;
         }
@@ -180,17 +180,13 @@ pub mod metaplex_anchor_nft {
     }
 
     #[access_control(is_admin(&ctx.accounts.minting_account, &ctx.accounts.admin))]
-    pub fn set_uri(ctx: Context<CommonSt>, _nonce_minting: u8, new_uri: String) -> ProgramResult {
+    pub fn set_uri(ctx: Context<CommonSt>, _nonce_minting: u8, new_uri: String) -> Result<()> {
         ctx.accounts.minting_account.base_uri = new_uri;
         Ok(())
     }
 
     #[access_control(is_admin(&ctx.accounts.minting_account, &ctx.accounts.admin))]
-    pub fn set_title(
-        ctx: Context<CommonSt>,
-        _nonce_minting: u8,
-        new_title: String,
-    ) -> ProgramResult {
+    pub fn set_title(ctx: Context<CommonSt>, _nonce_minting: u8, new_title: String) -> Result<()> {
         ctx.accounts.minting_account.base_title = new_title;
         Ok(())
     }
@@ -200,12 +196,12 @@ pub mod metaplex_anchor_nft {
         ctx: Context<CommonSt>,
         _nonce_minting: u8,
         new_symbol: String,
-    ) -> ProgramResult {
+    ) -> Result<()> {
         ctx.accounts.minting_account.symbol = new_symbol;
         Ok(())
     }
 
-    pub fn mint_nft_wl(ctx: Context<MintNFT>, proof: Vec<[u8; 32]>) -> ProgramResult {
+    pub fn mint_nft_wl(ctx: Context<MintNFT>, proof: Vec<[u8; 32]>) -> Result<()> {
         if proof.is_empty() {
             return Err(WalletMintErrors::InvalidProof.into());
         }
@@ -255,7 +251,7 @@ pub mod metaplex_anchor_nft {
         return _mint_nft(ctx, _price, _state, true);
     }
 
-    pub fn mint_nft(ctx: Context<MintNFT>) -> ProgramResult {
+    pub fn mint_nft(ctx: Context<MintNFT>) -> Result<()> {
         // set user minting info
         let mut _max_num = ctx.accounts.minting_account.public_max;
         let mut _price = ctx.accounts.minting_account.public_price;
@@ -276,7 +272,7 @@ pub mod metaplex_anchor_nft {
     }
 
     #[access_control(is_admin(&ctx.accounts.minting_account, &ctx.accounts.admin))]
-    pub fn mint_collection_nft(ctx: Context<MintCollectionNFT>) -> ProgramResult {
+    pub fn mint_collection_nft(ctx: Context<MintCollectionNFT>) -> Result<()> {
         msg!("Initializing Mint Ticket");
         let cpi_accounts = MintTo {
             mint: ctx.accounts.mint.to_account_info(),
@@ -359,7 +355,7 @@ pub mod metaplex_anchor_nft {
     }
 }
 
-fn _mint_nft(ctx: Context<MintNFT>, price: u64, state: u8, wl_mint: bool) -> ProgramResult {
+fn _mint_nft(ctx: Context<MintNFT>, price: u64, state: u8, wl_mint: bool) -> Result<()> {
     if ctx.accounts.minting_account.max_supply <= ctx.accounts.minting_account.cur_num {
         return Err(WalletMintErrors::SoldOut.into());
     }
@@ -478,7 +474,7 @@ fn _mint_nft(ctx: Context<MintNFT>, price: u64, state: u8, wl_mint: bool) -> Pro
         maker.to_account_info(),
     ];
     msg!("Master Edition Account Infos Assigned");
-    invoke(
+    invoke_signed(
         &create_master_edition_v3(
             ctx.accounts.token_metadata_program.key(),
             ctx.accounts.master_edition.key(),
@@ -490,6 +486,7 @@ fn _mint_nft(ctx: Context<MintNFT>, price: u64, state: u8, wl_mint: bool) -> Pro
             Some(0),
         ),
         master_edition_infos.as_slice(),
+        &[&authority_seeds],
     )?;
     msg!("Master Edition Nft Minted !!!");
 
@@ -520,7 +517,7 @@ fn _mint_nft(ctx: Context<MintNFT>, price: u64, state: u8, wl_mint: bool) -> Pro
 fn is_admin<'info>(
     minting_account: &Account<'info, MintingAccount>,
     signer: &Signer<'info>,
-) -> ProgramResult {
+) -> Result<()> {
     if minting_account.admin_key != *signer.key {
         return Err(WalletMintErrors::Unauthorized.into());
     }
@@ -531,11 +528,11 @@ fn is_admin<'info>(
 #[instruction(_nonce_minting: u8)]
 pub struct Initialize<'info> {
     #[account(
-        init_if_needed,
+        init,
         payer = initializer,
         seeds = [ constants::MINTING_PDA_SEED.as_ref() ],
-        bump = _nonce_minting,
-        space = 32 * 10 + 32 * 3 * 50
+        bump,
+        space = 8 + size_of::<MintingAccount>()
     )]
     pub minting_account: Box<Account<'info, MintingAccount>>,
 
@@ -636,10 +633,11 @@ pub struct MintNFT<'info> {
     pub minting_account: Box<Account<'info, MintingAccount>>,
     /// CHECK: This is not dangerous because we don't read or write from this account
     #[account(
-        init_if_needed,
+        init,
         payer = payer,
         seeds = [ payer.key().as_ref() ],
         bump,
+        space = 8 + size_of::<UserMintingAccount>()
     )]
     pub user_minting_counter_account: Box<Account<'info, UserMintingAccount>>,
     pub system_program: Program<'info, System>,
@@ -694,7 +692,7 @@ pub struct MintCollectionNFT<'info> {
     pub master_edition: UncheckedAccount<'info>,
 }
 
-#[error]
+#[error_code]
 pub enum WalletMintErrors {
     #[msg("Unauthorized.")]
     Unauthorized,

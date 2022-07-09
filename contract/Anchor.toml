@@ -1,7 +1,7 @@
-anchor_version = "0.19.0"
+anchor_version = "0.24.2"
 
 [programs.devnet]
-metaplex_anchor_nft = "DbK1YtvKCBGBiHw4HsbES25mFocihSt7xm55tpDahLe9"
+metaplex_anchor_nft = "EKsCmywFjtZ6DABbi57qvqK2CBMjFsC7c3CXV3G2HfKs"
 
 [registry]
 url = "https://anchor.projectserum.com"

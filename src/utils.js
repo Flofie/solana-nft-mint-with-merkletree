@@ -266,12 +266,11 @@ export const setUri = async (provider, wallet, newUri) => {
 export const initialize = async (provider, wallet) => {
   const programID = new PublicKey(idl.metadata.address);
   const program = new Program(idl, programID, provider);
-  const [stakingPubkey, stakingBump] = await web3.PublicKey.findProgramAddress(
+  const [stakingPubkey] = await web3.PublicKey.findProgramAddress(
     [Buffer.from(utils.bytes.utf8.encode(SEED))],
     program.programId
   );
   await program.rpc.initialize(
-    stakingBump,
     new anchor.BN(9999),
     new anchor.BN(3),
     new anchor.BN(4),

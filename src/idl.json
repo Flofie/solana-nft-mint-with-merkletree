@@ -33,10 +33,6 @@
       ],
       "args": [
         {
-          "name": "nonceMinting",
-          "type": "u8"
-        },
-        {
           "name": "maxSupply",
           "type": "u64"
         },
@@ -793,6 +789,6 @@
     }
   ],
   "metadata": {
-    "address": "DbK1YtvKCBGBiHw4HsbES25mFocihSt7xm55tpDahLe9"
+    "address": "EKsCmywFjtZ6DABbi57qvqK2CBMjFsC7c3CXV3G2HfKs"
   }
 }

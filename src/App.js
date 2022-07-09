@@ -3,7 +3,7 @@ import {
   getParsedNftAccountsByOwner,
   isValidSolanaAddress,
 } from '@nfteyez/sol-rayz';
-import { Provider } from '@project-serum/anchor';
+import { AnchorProvider as Provider } from '@project-serum/anchor';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { Connection } from '@solana/web3.js';
 import axios from 'axios';
