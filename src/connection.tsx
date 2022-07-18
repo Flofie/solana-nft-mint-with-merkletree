@@ -394,29 +394,29 @@ import {
       slot = confirmation?.slot || 0;
     } catch (err: any) {
        console.error('Timeout Error caught', err);
-      if (err.timeout) {
-        throw new Error('Timed out awaiting confirmation on transaction');
-      }
-      let simulateResult: SimulatedTransactionResponse | null = null;
-      try {
-        simulateResult = (
-          await simulateTransaction(connection, signedTransaction, 'single')
-        ).value;
-      } catch (e) { }
-      if (simulateResult && simulateResult.err) {
-        if (simulateResult.logs) {
-          for (let i = simulateResult.logs.length - 1; i >= 0; --i) {
-            const line = simulateResult.logs[i];
-            if (line.startsWith('Program log: ')) {
-              throw new Error(
-                'Transaction failed: ' + line.slice('Program log: '.length),
-              );
-            }
-          }
-        }
-        throw new Error(JSON.stringify(simulateResult.err));
-      }
-      // throw new Error('Transaction failed');
+      // if (err.timeout) {
+        // throw new Error('Timed out awaiting confirmation on transaction');
+      // }
+      // let simulateResult: SimulatedTransactionResponse | null = null;
+      // try {
+      //   simulateResult = (
+      //     await simulateTransaction(connection, signedTransaction, 'single')
+      //   ).value;
+      // } catch (e) { }
+      // if (simulateResult && simulateResult.err) {
+      //   if (simulateResult.logs) {
+      //     for (let i = simulateResult.logs.length - 1; i >= 0; --i) {
+      //       const line = simulateResult.logs[i];
+      //       if (line.startsWith('Program log: ')) {
+      //         throw new Error(
+      //           'Transaction failed: ' + line.slice('Program log: '.length),
+      //         );
+      //       }
+      //     }
+      //   }
+      //   throw new Error(JSON.stringify(simulateResult.err));
+      // }
+      throw new Error('Transaction failed');
     } finally {
       done = true;
     }
