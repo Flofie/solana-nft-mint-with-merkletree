@@ -307,27 +307,27 @@ export const initialize = async (provider, wallet) => {
     program.programId
   );
   try {
-    // await program.rpc.initialize(
-    //   new anchor.BN(9999),
-    //   new anchor.BN(300),
-    //   new anchor.BN(400),
-    //   new anchor.BN(100),
-    //   new anchor.BN(5e8),
-    //   new anchor.BN(4e8),
-    //   new anchor.BN(1e8),
-    //   TITLE,
-    //   SYMBOL,
-    //   BASE_URI,
-    //   {
-    //     accounts: {
-    //       mintingAccount: stakingPubkey,
-    //       initializer: wallet.publicKey,
-    //       systemProgram: SystemProgram.programId,
-    //       tokenProgram: TOKEN_PROGRAM_ID,
-    //       rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-    //     },
-    //   }
-    // );
+    await program.rpc.initialize(
+      new anchor.BN(9999),
+      new anchor.BN(300),
+      new anchor.BN(400),
+      new anchor.BN(100),
+      new anchor.BN(5e8),
+      new anchor.BN(4e8),
+      new anchor.BN(1e8),
+      TITLE,
+      SYMBOL,
+      BASE_URI,
+      {
+        accounts: {
+          mintingAccount: stakingPubkey,
+          initializer: wallet.publicKey,
+          systemProgram: SystemProgram.programId,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+        },
+      }
+    );
 
     let res = await newCollectionMint(provider, wallet);
 
