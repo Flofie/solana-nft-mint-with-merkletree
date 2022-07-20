@@ -370,13 +370,13 @@ function App(props) {
 
   async function init() {
     const provider = await getProvider();
-    await initialize(provider, wallet);
     try {
       await initialize(provider, wallet);
       alert('Success!!!');
       getState();
     } catch (e) {
-      alert('Fail:', e);
+      console.log('init error', e);
+      alert('Fail:');
     }
   }
 

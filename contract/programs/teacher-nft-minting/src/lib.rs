@@ -4,12 +4,17 @@ use anchor_lang::solana_program::program::invoke_signed;
 use anchor_lang::solana_program::system_instruction;
 use anchor_spl::token;
 use anchor_spl::token::{MintTo, Token};
-use mpl_token_metadata::instruction::{create_master_edition_v3, create_metadata_accounts_v2};
+use mpl_token_metadata::instruction::{create_master_edition_v3, create_metadata_accounts_v2, update_metadata_accounts_v2};
 use std::mem::size_of;
 
 pub mod merkle_proof;
+pub mod set_collection_during_mint;
 
-declare_id!("EKsCmywFjtZ6DABbi57qvqK2CBMjFsC7c3CXV3G2HfKs");
+pub use set_collection_during_mint::*;
+
+
+
+declare_id!("6Ag8EbK48mfb7MxMfsytNKa3veAJKXZXc1m9NNE3L5M7");
 pub mod constants {
     pub const MINTING_PDA_SEED: &[u8] = b"wallet_mint";
     pub const NFT_CREATOR_SEED: &str = "NFT_CREATOR_SEED";
@@ -46,6 +51,13 @@ pub mod metaplex_anchor_nft {
         ctx.accounts.minting_account.base_uri = base_uri;
         ctx.accounts.minting_account.base_title = title;
         ctx.accounts.minting_account.symbol = symbol;
+        Ok(())
+    }
+
+    pub fn set_collection_pda(ctx: Context<SetCollectionState>, collection_mint: Pubkey, collection_authority: Pubkey) -> Result<()> {
+        ctx.accounts.collection_pda.mint = collection_mint;
+        ctx.accounts.collection_pda.authority = collection_authority;
+
         Ok(())
     }
 
@@ -248,37 +260,39 @@ pub mod metaplex_anchor_nft {
             return Err(WalletMintErrors::MaxWhitelistSupplyReached.into());
         }
 
-        return _mint_nft(ctx, _price, _state, true);
+        return _mint_nft(ctx, _price, _state, true, false);
     }
 
-    pub fn mint_nft(ctx: Context<MintNFT>) -> Result<()> {
+    pub fn mint_nft(ctx: Context<MintNFT>, is_collection: bool) -> Result<()> {
         // set user minting info
         let mut _max_num = ctx.accounts.minting_account.public_max;
         let mut _price = ctx.accounts.minting_account.public_price;
         let mut _state: u8 = 3;
 
-        if ctx.accounts.minting_account.cur_stage == 0 {
-            return Err(WalletMintErrors::MintDisabled.into());
-        }
+        if is_collection == false {
+            if ctx.accounts.minting_account.cur_stage == 0 {
+                return Err(WalletMintErrors::MintDisabled.into());
+            }
 
-        if ctx.accounts.minting_account.cur_stage != 3 {
-            return Err(WalletMintErrors::NotPublicStage.into());
-        }
+            if ctx.accounts.minting_account.cur_stage != 3 {
+                return Err(WalletMintErrors::NotPublicStage.into());
+            }
 
-        if ctx.accounts.user_minting_counter_account.cur_num_public >= _max_num {
-            return Err(WalletMintErrors::MaxPublicSupplyReached.into());
+            if ctx.accounts.user_minting_counter_account.cur_num_public >= _max_num {
+                return Err(WalletMintErrors::MaxPublicSupplyReached.into());
+            }
         }
-        return _mint_nft(ctx, _price, _state, false);
+        return _mint_nft(ctx, _price, _state, false, is_collection);
     }
 
-    #[access_control(is_admin(&ctx.accounts.minting_account, &ctx.accounts.admin))]
-    pub fn mint_collection_nft(ctx: Context<MintCollectionNFT>) -> Result<()> {
-        msg!("Initializing Mint Ticket");
+    pub fn mint_collection_nft(ctx: Context<MintCollectionNFT>, creator_key: Pubkey, title: String, symbol: String) -> Result<()> {
+        msg!("Initializing Collection Mint");
         let cpi_accounts = MintTo {
             mint: ctx.accounts.mint.to_account_info(),
             to: ctx.accounts.token_account.to_account_info(),
             authority: ctx.accounts.payer.to_account_info(),
         };
+
         msg!("CPI Accounts Assigned");
         let cpi_program = ctx.accounts.token_program.to_account_info();
         msg!("CPI Program Assigned");
@@ -289,7 +303,7 @@ pub mod metaplex_anchor_nft {
         let account_info = vec![
             ctx.accounts.metadata.to_account_info(),
             ctx.accounts.mint.to_account_info(),
-            ctx.accounts.admin.to_account_info(),
+            ctx.accounts.mint_authority.to_account_info(),
             ctx.accounts.payer.to_account_info(),
             ctx.accounts.token_metadata_program.to_account_info(),
             ctx.accounts.token_program.to_account_info(),
@@ -297,28 +311,30 @@ pub mod metaplex_anchor_nft {
             ctx.accounts.rent.to_account_info(),
         ];
         msg!("Account Info Assigned");
-        let creator = vec![mpl_token_metadata::state::Creator {
-            address: ctx.accounts.admin.key(),
-            verified: false,
-            share: 100,
-        }];
-
+        let creator = vec![
+            mpl_token_metadata::state::Creator {
+                address: creator_key,
+                verified: true,
+                share: 100,
+            },
+        ];
         msg!("Creator Assigned");
+
         invoke(
             &create_metadata_accounts_v2(
                 ctx.accounts.token_metadata_program.key(),
                 ctx.accounts.metadata.key(),
                 ctx.accounts.mint.key(),
-                ctx.accounts.admin.key(),
+                ctx.accounts.mint_authority.key(),
                 ctx.accounts.payer.key(),
                 ctx.accounts.payer.key(),
-                "Degen Sweepers".to_string(),
-                "DS".to_string(),
+                title,
+                symbol,
                 "".to_string(),
                 Some(creator),
-                0,
+                1,
                 true,
-                false,
+                true,
                 None,
                 None,
             ),
@@ -328,7 +344,7 @@ pub mod metaplex_anchor_nft {
         let master_edition_infos = vec![
             ctx.accounts.master_edition.to_account_info(),
             ctx.accounts.mint.to_account_info(),
-            ctx.accounts.admin.to_account_info(),
+            ctx.accounts.mint_authority.to_account_info(),
             ctx.accounts.payer.to_account_info(),
             ctx.accounts.metadata.to_account_info(),
             ctx.accounts.token_metadata_program.to_account_info(),
@@ -343,7 +359,7 @@ pub mod metaplex_anchor_nft {
                 ctx.accounts.master_edition.key(),
                 ctx.accounts.mint.key(),
                 ctx.accounts.payer.key(),
-                ctx.accounts.admin.key(),
+                ctx.accounts.mint_authority.key(),
                 ctx.accounts.metadata.key(),
                 ctx.accounts.payer.key(),
                 Some(0),
@@ -351,33 +367,87 @@ pub mod metaplex_anchor_nft {
             master_edition_infos.as_slice(),
         )?;
         msg!("Master Edition Nft Minted !!!");
+
         Ok(())
     }
+
+
+    pub fn set_collection_during_mint(ctx: Context<SetCollectionDuringMint>) -> Result<()> {
+        handle_set_collection_during_mint(ctx)
+    }
+
+    pub fn init_collection_authority(ctx: Context<InitCollectionAuthorityRecord>) -> Result<()> {
+
+        let account_info = vec![
+            ctx.accounts.metadata.to_account_info(),
+            ctx.accounts.mint.to_account_info(),
+            ctx.accounts.mint_authority.to_account_info(),
+            ctx.accounts.payer.to_account_info(),
+            ctx.accounts.token_metadata_program.to_account_info(),
+            ctx.accounts.token_program.to_account_info(),
+            ctx.accounts.system_program.to_account_info(),
+            ctx.accounts.rent.to_account_info(),
+        ];
+        msg!("Account Info Assigned");
+        let creator = vec![mpl_token_metadata::state::Creator {
+            address: ctx.accounts.mint.key(),
+            verified: false,
+            share: 100,
+        }];
+
+        msg!("Creator Assigned");
+        invoke(
+            &create_metadata_accounts_v2(
+                ctx.accounts.token_metadata_program.key(),
+                ctx.accounts.metadata.key(),
+                ctx.accounts.mint.key(),
+                ctx.accounts.mint_authority.key(),
+                ctx.accounts.payer.key(),
+                ctx.accounts.payer.key(),
+                "AuthorityRecord".to_string(),
+                "AR".to_string(),
+                "".to_string(),
+                Some(creator),
+                0,
+                true,
+                false,
+                None,
+                None,
+            ),
+            account_info.as_slice(),
+        )?;
+        msg!("Metadata Account Created !!!");
+
+        Ok(())
+    }
+
 }
 
-fn _mint_nft(ctx: Context<MintNFT>, price: u64, state: u8, wl_mint: bool) -> Result<()> {
-    if ctx.accounts.minting_account.max_supply <= ctx.accounts.minting_account.cur_num {
-        return Err(WalletMintErrors::SoldOut.into());
-    }
-    if ctx.accounts.minting_account.cur_stage != state {
-        return Err(WalletMintErrors::InvalidStage.into());
-    }
+fn _mint_nft(ctx: Context<MintNFT>, price: u64, state: u8, wl_mint: bool, is_collection: bool) -> Result<()> {
+    if is_collection == false {
+        if ctx.accounts.minting_account.max_supply <= ctx.accounts.minting_account.cur_num {
+            return Err(WalletMintErrors::SoldOut.into());
+        }
+        if ctx.accounts.minting_account.cur_stage != state {
+            return Err(WalletMintErrors::InvalidStage.into());
+        }
 
-    if ctx.accounts.minting_account.admin_key != *ctx.accounts.owner.key {
-        return Err(WalletMintErrors::InvalidOwner.into());
+        if ctx.accounts.minting_account.admin_key != *ctx.accounts.owner.key {
+            return Err(WalletMintErrors::InvalidOwner.into());
+        }
+
+        let transfer_sol_to_seller =
+            system_instruction::transfer(ctx.accounts.payer.key, ctx.accounts.owner.key, price);
+
+        invoke(
+            &transfer_sol_to_seller,
+            &[
+                ctx.accounts.payer.to_account_info(),
+                ctx.accounts.owner.to_account_info(),
+                ctx.accounts.token_program.to_account_info(),
+            ],
+        )?;
     }
-
-    let transfer_sol_to_seller =
-        system_instruction::transfer(ctx.accounts.payer.key, ctx.accounts.owner.key, price);
-
-    invoke(
-        &transfer_sol_to_seller,
-        &[
-            ctx.accounts.payer.to_account_info(),
-            ctx.accounts.owner.to_account_info(),
-            ctx.accounts.token_program.to_account_info(),
-        ],
-    )?;
 
     msg!("Initializing Mint Ticket");
     let cpi_accounts = MintTo {
@@ -490,27 +560,34 @@ fn _mint_nft(ctx: Context<MintNFT>, price: u64, state: u8, wl_mint: bool) -> Res
     )?;
     msg!("Master Edition Nft Minted !!!");
 
-    // msg!("Set and verify collection");
-    // invoke(
-    //     &verify_collection(
-    //         ctx.accounts.token_metadata_program.key(),
-    //         ctx.accounts.metadata.key(),
-    //         ctx.accounts.owner.key(),
-    //         ctx.accounts.payer.key(),
-    //         ctx.accounts.collection.key(),
-    //         ctx.accounts.collection.key(),
-    //         ctx.accounts.collection.key(),
-    //         Some(ctx.accounts.collection.key()),
-    //     ),
-    //     master_edition_infos.as_slice(),
-    // )?;
+    invoke_signed(
+        &update_metadata_accounts_v2(
+            ctx.accounts.token_metadata_program.key(),
+            ctx.accounts.metadata.key(),
+            maker.key(),
+            Some(ctx.accounts.update_authority.key()),
+            None,
+            Some(true),
+            None,
+        ),
+        &[
+            ctx.accounts.token_metadata_program.to_account_info(),
+            ctx.accounts.metadata.to_account_info(),
+            maker.to_account_info(),
+        ],
+        &[&authority_seeds],
+    )?;
+    msg!("Updated !!!");
 
-    if wl_mint {
-        ctx.accounts.user_minting_counter_account.cur_num_whitelist += 1;
-    } else {
-        ctx.accounts.user_minting_counter_account.cur_num_public += 1;
+    if is_collection == false {
+        if wl_mint {
+            ctx.accounts.user_minting_counter_account.cur_num_whitelist += 1;
+        } else {
+            ctx.accounts.user_minting_counter_account.cur_num_public += 1;
+        }
+        ctx.accounts.minting_account.cur_num += 1;
     }
-    ctx.accounts.minting_account.cur_num += 1;
+
     Ok(())
 }
 
@@ -607,6 +684,11 @@ pub struct MintNFT<'info> {
     /// CHECK: This is not dangerous because we don't read or write from this account
     #[account(mut)]
     pub mint: UncheckedAccount<'info>,
+
+    /// CHECK: This is not dangerous because we don't read or write from this account
+    #[account(mut)]
+    pub update_authority: Signer<'info>,
+
     // #[account(mut)]
     pub token_program: Program<'info, Token>,
     /// CHECK: This is not dangerous because we don't read or write from this account
@@ -655,8 +737,8 @@ pub struct MintNFT<'info> {
 #[derive(Accounts)]
 pub struct MintCollectionNFT<'info> {
     #[account(mut)]
-    pub admin: Signer<'info>,
-    /// CHECK: This is not dangerous because we don't read or write from this account
+    pub mint_authority: Signer<'info>,
+/// CHECK: This is not dangerous because we don't read or write from this account
     #[account(mut)]
     pub mint: UncheckedAccount<'info>,
     // #[account(mut)]
@@ -672,24 +754,65 @@ pub struct MintCollectionNFT<'info> {
     /// CHECK: This is not dangerous because we don't read or write from this account
     #[account(mut)]
     pub payer: AccountInfo<'info>,
-    /// CHECK: This is not dangerous because we don't read or write from this account
-    #[account(mut)]
-    pub owner: AccountInfo<'info>,
-    /// CHECK: This is not dangerous because we don't read or write from this account
-    #[account(
-        mut,
-        seeds = [ constants::MINTING_PDA_SEED.as_ref() ],
-        bump,
-        constraint = !minting_account.freeze_program,
-    )]
-    pub minting_account: Box<Account<'info, MintingAccount>>,
-    /// CHECK: This is not dangerous because we don't read or write from this account
     pub system_program: Program<'info, System>,
     /// CHECK: This is not dangerous because we don't read or write from this account
     pub rent: AccountInfo<'info>,
     /// CHECK: This is not dangerous because we don't read or write from this account
     #[account(mut)]
     pub master_edition: UncheckedAccount<'info>,
+}
+
+#[derive(Accounts)]
+pub struct SetCollectionState<'info> {
+    #[account(mut)]
+    pub admin: Signer<'info>,
+
+    #[account(
+        init_if_needed,
+        payer = admin,
+        seeds = [ b"collection".as_ref() ],
+        bump,
+        space = 8 + size_of::<CollectionState>()
+    )]
+    pub collection_pda: Box<Account<'info, CollectionState>>,
+
+    /// CHECK: This is not dangerous because we don't read or write from this account
+    pub system_program: Program<'info, System>,
+    /// CHECK: This is not dangerous because we don't read or write from this account
+    pub rent: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct InitCollectionAuthorityRecord<'info> {
+    #[account(mut)]
+    pub admin: Signer<'info>,
+
+    /// CHECK: This is not dangerous because we don't read or write from this account
+    #[account(mut)]
+    pub mint: UncheckedAccount<'info>,
+
+    /// CHECK: This is not dangerous because we don't read or write from this account
+    #[account(mut)]
+    pub mint_authority: UncheckedAccount<'info>,
+
+    // #[account(mut)]
+    pub token_program: Program<'info, Token>,
+    /// CHECK: This is not dangerous because we don't read or write from this account
+    #[account(mut)]
+    pub metadata: UncheckedAccount<'info>,
+
+    /// CHECK: This is not dangerous because we don't read or write from this account
+    pub token_metadata_program: UncheckedAccount<'info>,
+    /// CHECK: This is not dangerous because we don't read or write from this account
+    #[account(mut)]
+    pub payer: AccountInfo<'info>,
+
+    /// CHECK: This is not dangerous because we don't read or write from this account
+    pub system_program: Program<'info, System>,
+
+    /// CHECK: This is not dangerous because we don't read or write from this account
+    pub rent: AccountInfo<'info>,
+    
 }
 
 #[error_code]

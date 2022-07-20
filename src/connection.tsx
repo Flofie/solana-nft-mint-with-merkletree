@@ -152,13 +152,17 @@ import {
       let transaction = new Transaction();
       instructions.forEach(instruction => transaction.add(instruction));
       transaction.recentBlockhash = block.blockhash;
+      let sigTmp: any = [];
+      if (signers && signers.length > 0) {
+        sigTmp = [...signers.map(s => s.publicKey)];
+      }
       transaction.setSigners(
         // fee payed by the wallet owner
         wallet.publicKey,
-        ...signers.map(s => s.publicKey),
+        ...sigTmp,
       );
   
-      if (signers.length > 0) {
+      if (signers && signers.length > 0) {
         transaction.partialSign(...signers);
       }
   
@@ -532,7 +536,7 @@ import {
     });
   
     //@ts-ignore
-    if (connection._signatureSubscriptions[subId])
+    if (connection._signatureSubscriptions && subId < connection._signatureSubscriptions.length && connection._signatureSubscriptions[subId])
       connection.removeSignatureListener(subId);
     done = true;
     console.log('Returning status', status);
